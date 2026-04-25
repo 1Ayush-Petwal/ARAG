@@ -41,15 +41,13 @@ How it resolves the issue: Knowledge Graphs store data as strict, factual relati
 Novelty Implementation (Web Fallback & LLM Assessment)
 The creators of LangChain have recently released official boilerplate code for the WeKnow-RAG concepts under their LangGraph framework:
 
-- https://github.com/langchain-ai/langgraph (Agentic RAG Example): If you look in the LangGraph examples repository (/examples/rag/langgraph_agentic_rag.ipynb), they provide the exact code for the "Self-Assessment Grader." It uses a computational graph to route the LLM: if the retrieved context is bad (Graded "No"), it triggers an external web search tool and rewrites the query.
+- https://github.com/langchain-ai/langgraph (Agentic RAG Example): LangGraph examples repository (/examples/rag/langgraph_agentic_rag.ipynb), provide the exact code for the "Self-Assessment Grader." It uses a computational graph to route the LLM: if the retrieved context is bad (Graded "No"), it triggers an external web search tool and rewrites the query.
 
-- https://github.com/sarabesh/HybridRAG: This repository perfectly implements the baseline you need. It combines vector search (embeddings) with graph search (structured knowledge graphs) to retrieve context before passing it to the LLM.
+- https://github.com/junhongmit/HybridRAG-Bench ( Bench Marking repo for a the Hybrid RAG that is built )
 
-- https://github.com/junhongmit/HybridRAG-Bench
+- https://github.com/NetApp/hybrid-rag-graph-with-ai-governance(Repo built around the exact HybridRAG arXiv:2408.04948 paper concepts)
 
-- https://github.com/NetApp/hybrid-rag-graph-with-ai-governance(This is a real repo built around the exact HybridRAG arXiv:2408.04948 paper concepts)
-
-- https://github.com/tomasonjo/blogs ( Contains great LangChain + Neo4j GraphRAG templates )
+- https://github.com/tomasonjo/blogs ( Contains LangChain + Neo4j GraphRAG templates )
 
 - (WeKnow-RAG: An Adaptive Approach for Retrieval-Augmented Generation Integrating Web Search and Knowledge Graphs) (https://arxiv.org/abs/2408.07611)
 
