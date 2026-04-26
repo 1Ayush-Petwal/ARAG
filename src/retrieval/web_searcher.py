@@ -8,8 +8,10 @@ import logging
 from typing import Optional
 
 from langchain_core.documents import Document
+import hashlib
 
 from src.config import AppConfig, get_config
+from src.ingestion.graph_indexer import ingest_to_graph
 
 logger = logging.getLogger("hybrid_rag.retrieval.web")
 
@@ -50,6 +52,8 @@ def web_search(
         body = item.get("body", "")
         href = item.get("href", "")
 
+        chunk_id = f"web_{hashlib.md5(href.encode('utf-8')).hexdigest()[:8]}"
+
         # Wrap in untrusted_source to mitigate prompt injection
         content = (
             f"<untrusted_source title='{title}' url='{href}'>\n"
@@ -58,8 +62,16 @@ def web_search(
         )
         docs.append(Document(
             page_content=content,
-            metadata={"source": href, "title": title, "type": "web_search"},
+            metadata={"source": href, "title": title, "type": "web_search", "chunk_id": chunk_id},
         ))
 
     logger.info(f"Web search: {len(docs)} result(s) for '{query[:60]}...'")
+    
+    if docs:
+        logger.info("Self-healing: extracting knowledge from web docs into Neo4j graph...")
+        try:
+            ingest_to_graph(docs, config=config, batch_size=len(docs))
+        except Exception as exc:
+            logger.error(f"Neo4j auto-ingest for web docs failed: {exc}")
+
     return docs

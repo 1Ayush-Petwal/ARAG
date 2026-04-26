@@ -59,6 +59,7 @@ def _web_search_node(state: GraphState) -> dict:
     return {
         "web_docs": docs,
         "route_log": ["web_searcher"],
+        "learned_new_facts": len(docs) > 0,
     }
 
 
@@ -148,6 +149,7 @@ def run_query(question: str) -> dict:
         "unsupported_claims": [],
         "iterations":         0,
         "route_log":          [],
+        "learned_new_facts":  False,
     }
 
     logger.info(f"Query: '{question}'")

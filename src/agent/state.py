@@ -44,3 +44,5 @@ class GraphState(TypedDict):
     iterations: int
     # operator.add ensures each node appends rather than replaces the log
     route_log: Annotated[list[str], operator.add]
+    learned_new_facts: Optional[bool]
+
