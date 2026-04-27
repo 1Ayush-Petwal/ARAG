@@ -22,15 +22,21 @@ QUERY_ANALYZER_PROMPT = ChatPromptTemplate.from_messages([
 
 GRADER_PROMPT = ChatPromptTemplate.from_messages([
     ("system", (
-        "You are a strict relevance grader for a RAG system.\n\n"
+        "You are a relevance grader for a RAG system.\n\n"
         "Given a question and retrieved context, choose exactly ONE grade:\n"
-        '- "sufficient": The context clearly and directly addresses the question with '
-        "enough factual detail to produce a correct, complete answer.\n"
-        '- "poor": The context touches the topic but is missing key information needed '
-        "for a complete answer.\n"
-        '- "off_topic": The context is entirely unrelated to the question.\n\n'
-        'Be strict. Reserve "sufficient" for cases where you are confident the question '
-        "can be answered from the context alone.\n"
+        '- "sufficient": The context contains the facts needed to answer the question. '
+        "Phrasing in the context may differ from the question (e.g. 'Last Updated By' "
+        "answers 'who maintains/authored/updated'); judge by MEANING, not exact wording.\n"
+        '- "poor": The context is on the same topic / domain as the question but is '
+        "missing the specific facts required to answer it. When in doubt between "
+        '"poor" and "off_topic", prefer "poor".\n'
+        '- "off_topic": The context shares NO subject matter with the question — '
+        "different domain entirely (e.g. question about a course syllabus, context "
+        "about unrelated sports scores). Use this sparingly; only when there is "
+        "essentially zero topical overlap.\n\n"
+        "Important: do NOT mark context as off_topic just because the answer's "
+        "phrasing differs from the question's phrasing, or because the context is "
+        "incomplete. Those are 'poor', not 'off_topic'.\n"
         "Always provide a brief reason."
     )),
     ("human", "Question: {question}\n\nRetrieved Context:\n{context}"),

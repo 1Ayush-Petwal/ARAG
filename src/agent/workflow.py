@@ -15,12 +15,10 @@ generator  rewriter  web_searcher ──────────────┤
    │           │                                │
    │           └──► hybrid_retriever (loop) ────┘
    │
-hallucination_checker
+hallucination_checker  (advisory — tags state, never loops)
    │
- ┌─┴────────┐
- │grounded  │ungrounded + budget
- ▼          ▼
-END      generator (regenerate)
+   ▼
+  END
 """
 import logging
 from functools import lru_cache
@@ -32,10 +30,7 @@ from src.agent.state import GraphState
 from src.config import get_config
 from src.graph_nodes.grader import decide_after_grade, grader_node
 from src.graph_nodes.generator import generator_node
-from src.graph_nodes.hallucination_checker import (
-    decide_after_hallucination_check,
-    hallucination_checker_node,
-)
+from src.graph_nodes.hallucination_checker import hallucination_checker_node
 from src.graph_nodes.query_analyzer import query_analyzer_node
 from src.graph_nodes.retriever_node import retriever_node
 from src.graph_nodes.rewriter import rewriter_node
@@ -102,15 +97,14 @@ def build_workflow() -> StateGraph:
     # ── Generator → hallucination check ──────────────────────────────────────
     wf.add_edge("generator", "hallucination_checker")
 
-    # ── Hallucination check: end or regenerate ────────────────────────────────
-    wf.add_conditional_edges(
-        "hallucination_checker",
-        decide_after_hallucination_check,
-        {
-            "end":        END,
-            "regenerate": "generator",
-        },
-    )
+    # ── Hallucination check is ADVISORY ───────────────────────────────────────
+    # Earlier the workflow regenerated on a failed check, but the fast model
+    # frequently false-positives on grounded answers, causing infinite loops
+    # that returned the same answer while burning rate-limit budget. The
+    # check still runs and tags state.grounded / state.unsupported_claims so
+    # the UI can surface low-confidence warnings — but it no longer gates
+    # the response.
+    wf.add_edge("hallucination_checker", END)
 
     return wf
 

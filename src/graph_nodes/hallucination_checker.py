@@ -1,11 +1,14 @@
 """Hallucination checker node.
 
 Verifies that the generated answer is grounded in the retrieved context.
-If unsupported claims are found and the iteration budget allows, the
-workflow loops back to the generator with an explicit correction prompt.
+
+NOTE: This check is ADVISORY in the current workflow — it tags
+state.grounded / state.unsupported_claims so callers can surface a
+low-confidence warning, but it does NOT loop the workflow back to the
+generator. The previous regenerate loop produced infinite-retry storms
+when the fast model false-positived on correctly grounded answers.
 """
 import logging
-from typing import Literal
 
 from pydantic import BaseModel
 
@@ -58,14 +61,3 @@ def hallucination_checker_node(state: GraphState) -> dict:
     }
 
 
-def decide_after_hallucination_check(state: GraphState) -> Literal["end", "regenerate"]:
-    """
-    Conditional edge — end if grounded; regenerate if ungrounded and budget allows.
-    """
-    grounded = state.get("grounded", True)
-    iterations = state.get("iterations", 0)
-    max_iter = get_config().agent.max_iterations
-
-    if grounded or iterations >= max_iter:
-        return "end"
-    return "regenerate"

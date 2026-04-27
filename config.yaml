@@ -1,7 +1,8 @@
 llm:
-  provider: groq                          # groq | ollama
-  generation_model: llama-3.1-70b-versatile
-  fast_model: llama-3.1-8b-instant
+  provider: groq                          # groq | google | ollama (used for generation)
+  fast_provider: google                   # provider for grader / hallucination check / rewriter
+  generation_model: llama-3.3-70b-versatile
+  fast_model: gemini-2.5-flash            # Gemini 2.5 Flash — strong at structured judgment
   temperature: 0.0
   max_tokens: 2048
   ollama_base_url: http://localhost:11434

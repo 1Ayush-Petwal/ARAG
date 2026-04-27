@@ -36,7 +36,12 @@ def web_search(
     n = max_results or config.web_search.max_results
 
     try:
-        from duckduckgo_search import DDGS
+        # Package was renamed `duckduckgo_search` -> `ddgs`. Prefer the new
+        # name; fall back to the old one so existing installs keep working.
+        try:
+            from ddgs import DDGS
+        except ImportError:
+            from duckduckgo_search import DDGS
 
         with DDGS() as ddgs:
             raw = list(ddgs.text(query, max_results=n))

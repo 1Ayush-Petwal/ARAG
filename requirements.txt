@@ -9,6 +9,7 @@ langgraph>=0.2.0
 # ── LLM Providers ─────────────────────────────────────────────────────────────
 langchain-groq>=0.2.0
 langchain-ollama>=0.2.0          # fallback if Groq rate-limited
+langchain-google-genai>=2.0.0    # Gemini 2.5 Flash for fast/judgment role
 
 # ── Embeddings ────────────────────────────────────────────────────────────────
 langchain-huggingface>=0.1.0

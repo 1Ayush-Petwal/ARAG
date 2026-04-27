@@ -3,8 +3,25 @@
 Launch with:
     streamlit run app.py
 """
+import logging
 import sys
+import warnings
 from pathlib import Path
+
+# Silence Streamlit's hot-reload watcher noise. It introspects every loaded
+# module's `__path__`, which trips `transformers`' lazy importer and then
+# blows up trying to import optional vision submodules (zoedepth → torchvision)
+# we don't use. The watcher swallows the error itself; only the log is noise.
+logging.getLogger("streamlit.watcher.local_sources_watcher").setLevel(logging.ERROR)
+
+# Same root cause, separate symptom: `transformers` emits a FutureWarning
+# every time the watcher pokes a lazy submodule alias' `__path__`. With
+# dozens of vision/audio submodules and frequent watcher polls, the terminal
+# fills up. These warnings are not actionable for our use case.
+warnings.filterwarnings(
+    "ignore",
+    message=r".*Accessing `__path__` from.*",
+)
 
 import streamlit as st
 
@@ -39,7 +56,7 @@ with st.sidebar:
     st.markdown("""
 | Component | Library |
 |---|---|
-| LLM | Groq (llama-3.1-70b) |
+| LLM | Groq (llama-3.3-70b) |
 | Fast LLM | Groq (llama-3.1-8b) |
 | Embeddings | all-MiniLM-L6-v2 |
 | Vector DB | ChromaDB |

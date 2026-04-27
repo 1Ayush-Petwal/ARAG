@@ -17,8 +17,9 @@ BASE_DIR = Path(__file__).parent.parent
 
 
 class LLMConfig(BaseModel):
-    provider: str = "groq"
-    generation_model: str = "llama-3.1-70b-versatile"
+    provider: str = "groq"           # default provider for the generation role
+    fast_provider: Optional[str] = None  # override for the "fast" role; falls back to provider
+    generation_model: str = "llama-3.3-70b-versatile"
     fast_model: str = "llama-3.1-8b-instant"
     temperature: float = 0.0
     max_tokens: int = 2048
@@ -71,6 +72,7 @@ class AppConfig(BaseModel):
 
     # Secrets — always from env, never from YAML
     groq_api_key: str = ""
+    google_api_key: str = ""
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_username: str = "neo4j"
     neo4j_password: str = ""
@@ -90,6 +92,7 @@ def load_config(config_path: Optional[str] = None) -> AppConfig:
     return AppConfig(
         **data,
         groq_api_key=os.getenv("GROQ_API_KEY", ""),
+        google_api_key=os.getenv("GOOGLE_API_KEY", ""),
         neo4j_uri=os.getenv("NEO4J_URI", "bolt://localhost:7687"),
         neo4j_username=os.getenv("NEO4J_USERNAME", "neo4j"),
         neo4j_password=os.getenv("NEO4J_PASSWORD", ""),

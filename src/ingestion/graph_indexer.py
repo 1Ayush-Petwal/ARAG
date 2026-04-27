@@ -34,24 +34,37 @@ def get_graph(config: Optional[AppConfig] = None) -> Neo4jGraph:
 
 
 def _create_indexes(graph: Neo4jGraph) -> None:
-    """Create fulltext and vector indexes for efficient entity lookup."""
-    queries = [
-        # Fulltext index on entity names (used by graph_retriever fallback)
-        """
-        CREATE FULLTEXT INDEX entity_fulltext IF NOT EXISTS
-        FOR (n:__Entity__) ON EACH [n.id]
-        """,
-        # Regular index on the id property for fast MATCH
-        """
-        CREATE INDEX entity_id_index IF NOT EXISTS
-        FOR (n:__Entity__) ON (n.id)
-        """,
-    ]
-    for q in queries:
-        try:
-            graph.query(q.strip())
-        except Exception as exc:
-            logger.debug(f"Index creation note: {exc}")
+    """Create fulltext index and ensure the entity id constraint exists.
+
+    add_graph_documents(baseEntityLabel=True) internally creates a uniqueness
+    constraint on (:__Entity__ {id}).  If a prior run left a plain index on
+    that property, Neo4j rejects the constraint with IndexAlreadyExists.
+    We drop the plain index first so the constraint can be (re-)created cleanly.
+    """
+    # Drop the plain index that conflicts with the uniqueness constraint
+    try:
+        graph.query("DROP INDEX entity_id_index IF EXISTS")
+    except Exception as exc:
+        logger.debug(f"entity_id_index drop note: {exc}")
+
+    # Uniqueness constraint on __Entity__.id — same property add_graph_documents
+    # needs; creating it here makes subsequent calls idempotent.
+    try:
+        graph.query(
+            "CREATE CONSTRAINT entity_id_unique IF NOT EXISTS "
+            "FOR (n:__Entity__) REQUIRE n.id IS UNIQUE"
+        )
+    except Exception as exc:
+        logger.debug(f"entity_id_unique constraint note: {exc}")
+
+    # Fulltext index on entity names (used by graph_retriever fallback)
+    try:
+        graph.query(
+            "CREATE FULLTEXT INDEX entity_fulltext IF NOT EXISTS "
+            "FOR (n:__Entity__) ON EACH [n.id]"
+        )
+    except Exception as exc:
+        logger.debug(f"entity_fulltext index note: {exc}")
 
     logger.info("Neo4j indexes ensured.")
 
@@ -59,7 +72,7 @@ def _create_indexes(graph: Neo4jGraph) -> None:
 def ingest_to_graph(
     chunks: list[Document],
     config: Optional[AppConfig] = None,
-    batch_size: int = 10,
+    batch_size: int = 4,
 ) -> Neo4jGraph:
     """
     Extract entities + relationships from chunks and store them in Neo4j.
@@ -75,8 +88,16 @@ def ingest_to_graph(
     if config is None:
         config = get_config()
 
-    llm = get_llm("generation", config)
+    # Graph extraction emits a large structured tool-call (all nodes +
+    # relationships per batch). The default max_tokens (2048) truncates that
+    # JSON mid-stream and Groq returns 400 tool_use_failed. Give this LLM a
+    # much bigger output budget so the function call can complete.
+    llm = get_llm("generation", config, max_tokens=8192)
     graph = get_graph(config)
+
+    # Drop conflicting plain index and ensure uniqueness constraint before
+    # add_graph_documents runs — otherwise Neo4j raises IndexAlreadyExists.
+    _create_indexes(graph)
 
     transformer = LLMGraphTransformer(
         llm=llm,
@@ -127,5 +148,4 @@ def ingest_to_graph(
         f"{total_nodes} node(s), {total_rels} relationship(s) extracted."
     )
 
-    _create_indexes(graph)
     return graph

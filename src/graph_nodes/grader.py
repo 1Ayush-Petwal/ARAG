@@ -27,11 +27,12 @@ def grader_node(state: GraphState) -> dict:
 
     Returns updates to: grade, grade_reason, route_log.
     """
-    question = (
-        state.get("rewritten_question")
-        or state.get("analyzed_question")
-        or state["question"]
-    )
+    # Grade against the user's ORIGINAL question, not the analyzer/rewriter
+    # output. Retrieval may need an expanded query, but relevance must be
+    # judged against the user's actual intent — otherwise vocabulary drift
+    # in the rewrite causes false off_topic verdicts on context that
+    # actually contains the answer.
+    question = state["question"]
     context = state["fused_context"]
     config = get_config()
 
@@ -55,9 +56,9 @@ def decide_after_grade(state: GraphState) -> str:
     Conditional edge function — routes to the next node based on grade.
 
     Routing logic:
-      sufficient → generator
-      off_topic  → web_searcher (skip retry loop, go straight to web)
-      poor       → query_rewriter if iterations remain, else web_searcher
+        sufficient → generator
+        off_topic  → web_searcher (skip retry loop, go straight to web)
+        poor       → query_rewriter if iterations remain, else web_searcher
     """
     grade = state["grade"]
     iterations = state.get("iterations", 0)
