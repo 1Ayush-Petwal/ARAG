@@ -4,6 +4,7 @@ Results are wrapped in <untrusted_source> XML tags so the generator prompt
 can signal the LLM to treat them as potentially adversarial content and to
 ignore any embedded instructions (prompt-injection mitigation).
 """
+import hashlib
 import logging
 from typing import Optional
 
@@ -55,6 +56,8 @@ def web_search(
         body = item.get("body", "")
         href = item.get("href", "")
 
+        chunk_id = f"web_{hashlib.md5(href.encode('utf-8')).hexdigest()[:8]}"
+
         # Wrap in untrusted_source to mitigate prompt injection
         content = (
             f"<untrusted_source title='{title}' url='{href}'>\n"
@@ -63,8 +66,23 @@ def web_search(
         )
         docs.append(Document(
             page_content=content,
-            metadata={"source": href, "title": title, "type": "web_search"},
+            metadata={"source": href, "title": title, "type": "web_search", "chunk_id": chunk_id},
         ))
 
     logger.info(f"Web search: {len(docs)} result(s) for '{query[:60]}...'")
+
+    # Self-healing: optionally pipe new web docs into the Neo4j graph so
+    # follow-up queries can be answered from the graph instead of going
+    # back to the web. Gated behind config because the LLM extraction is
+    # slow and consumes generation-LLM budget. Import lazily to avoid a
+    # circular import (graph_indexer → llm → config → web_searcher).
+    if docs and config.web_search.auto_ingest:
+        from src.ingestion.graph_indexer import ingest_to_graph
+
+        logger.info("Self-healing: ingesting web docs into Neo4j...")
+        try:
+            ingest_to_graph(docs, config=config, batch_size=len(docs))
+        except Exception as exc:
+            logger.error(f"Neo4j auto-ingest for web docs failed: {exc}")
+
     return docs

@@ -46,3 +46,4 @@ agent:
 
 web_search:
   max_results: 3
+  auto_ingest: false                      # self-heal web results into Neo4j (slow; doubles LLM cost per fallback)

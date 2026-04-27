@@ -59,6 +59,11 @@ class AgentConfig(BaseModel):
 
 class WebSearchConfig(BaseModel):
     max_results: int = 3
+    # Self-healing: when true, web-fallback results are synchronously
+    # extracted into the Neo4j graph so future queries can answer from
+    # the graph. Off by default — the LLM extraction adds significant
+    # latency and consumes the generation-LLM budget twice per fallback.
+    auto_ingest: bool = False
 
 
 class AppConfig(BaseModel):
